@@ -1,0 +1,120 @@
+﻿@using Tracker.Services;
+@inject ILoginService loginService;
+@inject LevelService levelService;
+
+@{
+    IDictionary<object, object?> dictionary = Model.HttpContext.Items;
+    int? level = (int?)dictionary["UserLevel"];
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Tracker</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Tracker.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-page="/Index">Tracker</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="Content" asp-page="/Items">Items</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="Content" asp-page="/Quests">Quests</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="Content" asp-page="/Hideout">Hideout</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav">
+                        @if (loginService.IsAuthenticated)
+                        {
+                            
+                            <li class="nav-link text-dark">
+                                <button onclick="Decrease()" type="button">-</button>
+                            </li>
+                            <li id="level" class="nav-link text-dark">@level</li>
+                            <li class="nav-link text-dark">
+                                <button onclick="Increase()" type="button">+</button>
+                            </li>
+                            <li class="nav-link text-dark">@Model.HttpContext.User.Identity.Name</li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" href="/Logout">Log Out</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Login">Sign In</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-page="/Register">Sign Up</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2024 - Tracker - <a asp-area="" asp-page="/Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        async function Increase() {
+            const response = await fetch("/increase", {
+                method: "PUT",
+                headers: { "Accept": "application/json" }
+            });
+
+            if (response.ok === true) {
+                const level = await response.json();
+                levelCounter.innerText = level.value;
+            }
+        }
+
+        async function Decrease() {
+            const response = await fetch("/decrease", {
+                method: "PUT",
+                headers: { "Accept": "application/json" }
+            });
+
+            if (response.ok === true) {
+                const level = await response.json();
+                levelCounter.innerText = level.value;
+            }
+        }
+
+        const levelCounter = document.getElementById("level");
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

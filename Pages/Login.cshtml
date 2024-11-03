@@ -1,0 +1,27 @@
+﻿@page
+@model Tracker.Pages.LoginModel
+@{
+    ViewData["Title"] = "Login page";
+}
+<form method="post">
+    @if (Model.WrongMessage != null)
+    {
+        <p>@Model.WrongMessage</p>
+    }
+    <p>
+        <label>Name/Email</label>
+        <input type="text" asp-for="LoginData"/>
+        <span asp-validation-for="LoginData"></span>
+    </p>
+    <p>
+        <label>Password</label>
+        <input type="password" asp-for="Password" />
+        <span asp-validation-for="Password"></span>
+    </p>
+    <p>
+        <input type="submit" value="Sign in"/>
+    </p>
+</form>
+<p>
+    Don't have an account? <a asp-page="/Register" asp-route-ReturnUrl="@Request.Query["ReturnUrl"]">Sign up</a>
+</p>

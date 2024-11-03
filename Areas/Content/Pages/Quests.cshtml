@@ -1,0 +1,186 @@
+﻿@page
+@model QuestsModel
+@{
+    ViewData["Title"] = "Quests";
+}
+<head>
+    <h1>Quests</h1>
+</head>
+<body>
+    <table>
+        <thead><tr><th>Giver</th><th>Title</th><th>Objectives</th><th>Wiki</th></tr></thead>
+        <tbody></tbody>
+    </table>
+</body>
+
+<script>
+    async function getQuests() {
+        const response = await fetch("/Content/Quests?handler=Quests", {
+            method: "GET",
+            headers: { "Accept": "application/json" }
+        });
+
+        if (response.ok === true) {
+            const result = await response.json();
+
+            if (result.success === false && result.redirectUrl) {
+                window.location.href = result.redirectUrl;
+            }
+            else {
+                const quests = result.quests;
+                createTable(quests);
+            }
+        }
+    }
+
+    function createTable(quests) {
+        const rows = document.querySelector("tbody");
+        rows.innerHTML = '';
+        quests.forEach(quest => rows.append(createRow(quest)));
+    }
+
+    function createRow(quest) {
+        const tr = document.createElement("tr");
+        tr.setAttribute("data-rowid", quest.id);
+
+        const giverTd = document.createElement("td");
+        giverTd.textContent = quest.giver;
+        tr.append(giverTd);
+
+        const titleTd = document.createElement("td");
+        titleTd.textContent = quest.title;
+        tr.append(titleTd);
+
+        const objectives = document.createElement("td");
+        for (const objective of quest.objectives) {
+            const innerTr = document.createElement("tr");
+            innerTr.textContent = createObjective(objective);
+            objectives.append(innerTr);
+        }
+        tr.append(objectives);
+
+        const wikiTd = document.createElement("td");
+        wikiTd.textContent = quest.wiki;
+        tr.append(wikiTd);
+
+        const doneLink = document.createElement("button");
+        doneLink.className = "btn btn-outline-dark";
+        doneLink.append("Done");
+        doneLink.addEventListener("click", async () => await compliteQuest(quest.id));
+        tr.append(doneLink);
+
+        return tr;
+    }
+
+    function createObjective(objective) {
+        let objectiveString = "";
+
+        if (objective.type === "warning") {
+            objectiveString = objective.target;
+        }
+        else if (objective.type === "reputation") {
+            objectiveString = `Reach level ${objective.number} loyalty with ${objective.target}`;
+        }
+        else if (objective.type === "skill") {
+            objectiveString = `Reach the required ${objective.number} ${objective.target} skill level`
+        }
+        else {
+            objectiveString += objective.type;
+
+            switch (objective.type) {
+                case "kill":
+                    objectiveString += ` ${objective.number}`;
+                    objectiveString += ` ${objective.target}`;
+
+                    const substrings = ["between", "in", "while", "reshala", "inside", "on", "secure"];
+
+                    for (let i = 0; objective.with[i] !== undefined; i++) {
+                        if (i === 0 && substrings.some(substring => objective.with[i].toLowerCase().startsWith(substring)) === false)
+                            objectiveString += " with";
+
+                        objectiveString += objective.with[i];
+
+                        if (objective.with[i + 1] !== undefined)
+                            objectiveString += ", ";
+                    }
+
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "collect":
+                    objectiveString += ` ${objective.number}`;
+                    objectiveString += ` ${objective.target}`;
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "pickup":
+                    objectiveString += ` ${objective.target}`;
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "place":
+                    if (objective.number !== 1)
+                        objectiveString += ` ${objective.number}`;
+
+                    objectiveString += ` ${objective.target}`;
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "mark":
+                    objectiveString += ` ${objective.target}`;
+                    objectiveString += ` with ${objective.tool}`;
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "find":
+                    objectiveString += " in raid";
+                    objectiveString += ` ${objective.number}`;
+                    objectiveString += ` ${objective.target}`;
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "locate":
+                    objectiveString += ` ${objective.target}`;
+                    objectiveString += ` on location ${objective.location}`;
+                    break;
+
+                case "build":
+                    objectiveString += ` ${objective.target}`;
+                    break;
+            }
+        }
+
+        return objectiveString;
+    }
+
+    async function compliteQuest(questId) {
+        try {
+            const response = await fetch("/Content/Quests?handler=QuestDone", {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": document.getElementById('antiForgeryToken').value
+                },
+                body: questId
+            });
+
+            if (response.ok === true) {
+                const result = await response.json();
+
+                if (result.success === false && result.redirectUrl) {
+                    window.location.href = result.redirectUrl;
+                }
+                else {
+                    const quests = result.quests;
+                    createTable(quests);
+                }
+            }
+        }
+        catch (error) {
+            console.error(error.message);
+        }
+    }
+
+    getQuests();
+</script>

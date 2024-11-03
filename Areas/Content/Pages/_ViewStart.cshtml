@@ -1,0 +1,7 @@
+﻿@{
+    Layout = "_Layout";
+
+    string? requestToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+}
+
+<input id="antiForgeryToken" type="hidden" value="@requestToken" />

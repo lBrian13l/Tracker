@@ -1,0 +1,30 @@
+﻿@page
+@model Tracker.Pages.RegisterModel
+@{
+    ViewData["Title"] = "Register page";
+}
+<form method="post">
+    <p>
+        <label>Name</label>
+        <input type="text" asp-for="UserName"/>
+        <span asp-validation-for="UserName"></span>
+    </p>
+    <p>
+        <label>Email</label>
+        <input type="email" asp-for="UserEmail" />
+        <span asp-validation-for="UserEmail"></span>
+    </p>
+    <p>
+        <label>Password</label>
+        <input type="password" asp-for="UserPassword" />
+        <span asp-validation-for="UserPassword"></span>
+    </p>
+    <p>
+        <label>Confirm Password</label>
+        <input type="password" asp-for="PasswordConformation" />
+        <span asp-validation-for="PasswordConformation"></span>
+    </p>
+    <p>
+        <input type="submit" value="Sign up" />
+    </p>
+</form>

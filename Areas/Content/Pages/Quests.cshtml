@@ -104,18 +104,15 @@
                             objectiveString += ", ";
                     }
 
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "collect":
                     objectiveString += ` ${objective.number}`;
                     objectiveString += ` ${objective.target}`;
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "pickup":
                     objectiveString += ` ${objective.target}`;
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "place":
@@ -123,30 +120,33 @@
                         objectiveString += ` ${objective.number}`;
 
                     objectiveString += ` ${objective.target}`;
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "mark":
                     objectiveString += ` ${objective.target}`;
                     objectiveString += ` with ${objective.tool}`;
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "find":
                     objectiveString += " in raid";
                     objectiveString += ` ${objective.number}`;
                     objectiveString += ` ${objective.target}`;
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "locate":
                     objectiveString += ` ${objective.target}`;
-                    objectiveString += ` on location ${objective.location}`;
                     break;
 
                 case "build":
                     objectiveString += ` ${objective.target}`;
                     break;
+            }
+
+            if (objective.type !== "build") {
+                objectiveString += ` on ${objective.location}`;
+
+                if (objective.location === "any")
+                    objectiveString += ` location`;
             }
         }
 

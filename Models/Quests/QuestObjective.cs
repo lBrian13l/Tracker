@@ -11,6 +11,7 @@ namespace Tracker.Models.Quests
         public string? Target { get; set; }
         public int Number { get; set; }
         public List<string> With { get; set; } = new List<string>();
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public Map Location { get; set; } = Map.any;
         public int QuestId { get; set; }
         [JsonIgnore]

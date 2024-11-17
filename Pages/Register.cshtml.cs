@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Tracker.Models;
+using Tracker.Models.Hideout;
 using Tracker.Services;
 
 namespace Tracker.Pages
@@ -89,6 +90,8 @@ namespace Tracker.Pages
         private async Task<User> AddNewUser()
         {
             User newUser = new User(UserName!, UserEmail!.ToLower(), UserPassword!);
+            List<Station> stations = await _db.Stations.ToListAsync();
+            newUser.UserInfo!.Stations = stations;
             await _db.Users.AddAsync(newUser);
             await _db.SaveChangesAsync();
             return newUser;

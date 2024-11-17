@@ -21,27 +21,73 @@ namespace Tracker.Areas.Content.Pages
 
         public async Task<IActionResult> OnGetStationsAsync()
         {
-            User? user = await _db.Users.Include(u => u.UserInfo)
-                .ThenInclude(ui => ui!.Stations)
-                .ThenInclude(s => s!.Modules)
-                .ThenInclude(m => m!.Requirements)
-                .FirstOrDefaultAsync(u => u.Name == _userName);
-            UserInfo? userInfo = user?.UserInfo;
-            List<Station> stations = await _db.Stations.ToListAsync();
+            UserInfo? userInfo = await GetUserInfo();
 
             if (userInfo == null)
                 return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
 
+            JsonArray userStations = await GetUserStations(userInfo);
+            return new JsonResult(new { success = true, stations = userStations }) { ContentType = "application/json" };
+        }
+
+        public async Task<IActionResult> OnPostDowngradeStationAsync([FromBody] int stationId)
+        {
+            UserInfo? userInfo = await GetUserInfo();
+
+            if (userInfo == null)
+                return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
+
+            UserInfoStationCross cross = userInfo.StationCrosses.FirstOrDefault(c => c.StationId == stationId)!;
+            Station station = userInfo.Stations.FirstOrDefault(s => s.Id == stationId)!;
+
+            if ((station.Name == "Stash" && cross.Level > 1) || cross.Level > 0)
+            {
+                cross.Level--;
+                await _db.SaveChangesAsync();
+            }
+
+            JsonArray userStations = await GetUserStations(userInfo);
+            return new JsonResult(new { success = true, stations = userStations }) { ContentType = "application/json" };
+        }
+
+        public async Task<IActionResult> OnPostUpgradeStationAsync([FromBody] int stationId)
+        {
+            UserInfo? userInfo = await GetUserInfo();
+
+            if (userInfo == null)
+                return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
+
+            UserInfoStationCross cross = userInfo.StationCrosses.FirstOrDefault(c => c.StationId == stationId)!;
+            Station station = userInfo.Stations.FirstOrDefault(s => s.Id == stationId)!;
+
+            if (cross.Level < station.Modules.Count)
+            {
+                cross.Level++;
+                await _db.SaveChangesAsync();
+            }
+
+            JsonArray userStations = await GetUserStations(userInfo);
+            return new JsonResult(new { success = true, stations = userStations }) { ContentType = "application/json" };
+        }
+
+        private async Task<UserInfo?> GetUserInfo()
+        {
+            User? user = await _db.Users.Include(u => u.UserInfo).ThenInclude(ui => ui!.StationCrosses)
+                .Include(u => u.UserInfo)
+                .ThenInclude(ui => ui!.Stations)
+                .ThenInclude(s => s!.Modules)
+                .ThenInclude(m => m!.Requirements)
+                .FirstOrDefaultAsync(u => u.Name == _userName);
+            return user?.UserInfo;
+        }
+
+        private async Task<JsonArray> GetUserStations(UserInfo userInfo)
+        {
+            List<Station> stations = await _db.Stations.ToListAsync();
             JsonArray userStations = new JsonArray();
 
             foreach (Station station in stations)
             {
-                if (userInfo.Stations.Contains(station) == false)
-                {
-                    userInfo.Stations.Add(station);
-                    await _db.SaveChangesAsync();
-                }
-
                 bool maxLevel = false;
                 bool isAvailable = true;
                 UserInfoStationCross cross = userInfo.StationCrosses.FirstOrDefault(c => c.StationId == station.Id)!;
@@ -61,7 +107,18 @@ namespace Tracker.Areas.Content.Pages
                         }
                         else
                         {
+                            Station requiredStation = userInfo.Stations.FirstOrDefault(s => s.Name == requirement.Name)!;
 
+                            if (requiredStation == null)
+                                continue;
+
+                            UserInfoStationCross requiredStationCross = userInfo.StationCrosses
+                                .FirstOrDefault(c => c.StationId == requiredStation.Id)!;
+
+                            if (requiredStationCross.Level < requirement.Quantity)
+                                isAvailable = false;
+                            else
+                                nextModule.Requirements.RemoveAt(i);
                         }
                     }
                 }
@@ -82,7 +139,7 @@ namespace Tracker.Areas.Content.Pages
                 }
             }
 
-            return new JsonResult(new { success = true, stations = userStations }) { ContentType = "application/json" };
+            return userStations;
         }
     }
 }

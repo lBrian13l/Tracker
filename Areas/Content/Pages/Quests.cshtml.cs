@@ -18,23 +18,6 @@ namespace Tracker.Areas.Content.Pages
             _userName = contextAccessor.HttpContext?.User.Identity?.Name;
         }
 
-        //public async Task OnGetAsync()
-        //{
-        //    List<Quest> quests = await _db.Quests.Include(q => q.Objectives).ToListAsync();
-
-        //    foreach (Quest quest in quests)
-        //        foreach (QuestObjective objective in quest.Objectives)
-        //            if (objective.Type == "locate")
-        //                System.Diagnostics.Debug.WriteLine(objective.Number);
-
-        //    List<string> objectives = new();
-
-        //    foreach (Quest quest in quests)
-        //        foreach (QuestObjective objective in quest.Objectives)
-        //            if (objectives.Contains(objective.Type!) == false && objective.With.Count != 0 /*Regex.IsMatch(objective.Target!, @"^\w{24}")*/)
-        //                objectives.Add(objective.Type!);
-        //}
-
         public async Task<IActionResult> OnGetQuestsAsync()
         {
             UserInfo? userInfo = await GetUserInfoAsync();
@@ -46,10 +29,10 @@ namespace Tracker.Areas.Content.Pages
             return new JsonResult(new { success = true, quests = availableQuests }) { ContentType = "application/json" };
         }
 
-        public async Task<IActionResult> OnPostQuestDoneAsync(int questId)
+        public async Task<IActionResult> OnPostQuestDoneAsync([FromBody]int questId)
         {
             UserInfo? userInfo = await GetUserInfoAsync();
-            Quest? quest = await _db.Quests.FirstOrDefaultAsync(q => q.Id == questId);
+            Quest? quest = await _db.Quests.FindAsync(questId);
 
             if (userInfo == null || quest == null)
                 return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
@@ -85,12 +68,12 @@ namespace Tracker.Areas.Content.Pages
                 {
                     if (objective.Type == "mark")
                     {
-                        Item? item = await _db.Items.FirstOrDefaultAsync(i => i.Id == objective.Tool);
+                        Item? item = await _db.Items.FindAsync(objective.Tool);
                         objective.Tool = item?.ShortName;
                     }
                     else if (types.Contains(objective.Type) && Regex.IsMatch(objective.Target!, @"^\w{24}"))
                     {
-                        Item? item = await _db.Items.FirstOrDefaultAsync(i => i.Id == objective.Target);
+                        Item? item = await _db.Items.FindAsync(objective.Target);
                         objective.Target = item?.ShortName;
                     }
                 }

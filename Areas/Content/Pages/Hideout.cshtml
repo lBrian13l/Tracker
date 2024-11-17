@@ -19,6 +19,10 @@
             headers: { "Accept": "application/json" }
         });
 
+        handleResponse(response);
+    }
+
+    async function handleResponse(response) {
         if (response.ok === true) {
             const result = await response.json();
 
@@ -27,6 +31,7 @@
             }
             else {
                 const stations = result.stations;
+                grid.innerHTML = '';
                 stations.forEach(station => createStation(station));
             }
         }
@@ -35,10 +40,71 @@
     function createStation(station) {
         const newCol = document.createElement("div");
         newCol.className = "col-12 col-sm-6 col-md-4 col-lg-3";
+        newCol.setAttribute("data-id", station.id);
         const newStation = document.createElement("div");
         newStation.className = "p-3 mb-3 bg-primary text-white text-center";
         newStation.textContent = station.name;
 
+        if (station.maxLevel) {
+            const maxLevelDescription = document.createElement("p");
+            maxLevelDescription.textContent = "Max level";
+            newStation.appendChild(maxLevelDescription);
+        }
+        else if (station.isAvailable === false) {
+            newStation.appendChild(createModuleRequirements(station));
+        }
+        else {
+            newStation.appendChild(createItemRequirements(station));
+        }
+
+        newStation.appendChild(createLevelDiv(station));
+        newCol.appendChild(newStation);
+        grid.appendChild(newCol);
+    }
+
+    function createModuleRequirements(station) {
+        const requirementsDiv = document.createElement("div");
+        requirementsDiv.id = "moduleRequirementsDiv";
+        const requires = document.createElement("span");
+        requires.textContent = "Requires:";
+        requirementsDiv.appendChild(requires);
+        let module = station.modules.find(module => module.level === station.level + 1);
+
+        if (module !== undefined) {
+            module.require.forEach(requirement => {
+                if (requirement.type === "module") {
+                    let requirementName = document.createElement("span");
+                    requirementName.textContent = requirement.name + " level " + requirement.quantity;
+                    requirementsDiv.appendChild(requirementName);
+                }
+            });
+        }
+
+        return requirementsDiv;
+    }
+
+    function createItemRequirements(station) {
+        const requirementsDiv = document.createElement("div");
+        requirementsDiv.id = "itemRequirementsDiv";
+        const requires = document.createElement("span");
+        requires.textContent = "Requires:";
+        requirementsDiv.appendChild(requires);
+        let module = station.modules.find(module => module.level === station.level + 1);
+
+        if (module !== undefined) {
+            module.require.forEach(requirement => {
+                if (requirement.type === "item") {
+                    let requirementName = document.createElement("span");
+                    requirementName.textContent = requirement.quantity + " " + requirement.name;
+                    requirementsDiv.appendChild(requirementName);
+                }
+            });
+        }
+
+        return requirementsDiv;
+    }
+
+    function createLevelDiv(station) {
         const levelDiv = document.createElement("div");
         levelDiv.className = "mt-3 d-flex justify-content-center align-items-center";
 
@@ -47,9 +113,15 @@
         downButton.textContent = "-";
         levelDiv.appendChild(downButton);
 
+        if ((station.name === "Stash" && station.level === 1) || station.level === 0)
+            downButton.setAttribute("disabled", '');
+        else {
+            downButton.addEventListener("click", async () => await downgradeStation(station.id));
+        }
+
         const level = document.createElement("span");
         level.className = "mx-2";
-        level.textContent = station.Level;
+        level.textContent = station.level;
         levelDiv.appendChild(level);
 
         const upButton = document.createElement("button");
@@ -57,9 +129,41 @@
         upButton.textContent = "+";
         levelDiv.appendChild(upButton);
 
-        newStation.appendChild(levelDiv);
-        newCol.appendChild(newStation);
-        grid.appendChild(newCol);
+        if (station.maxLevel || station.isAvailable === false)
+            upButton.setAttribute("disabled", '');
+        else {
+            upButton.addEventListener("click", async () => await upgradeStation(station.id));
+        }
+
+        return levelDiv;
+    }
+
+    async function downgradeStation(stationId) {
+        const response = await fetch("/Content/Hideout?handler=DowngradeStation", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "RequestVerificationToken": document.getElementById('antiForgeryToken').value
+            },
+            body: stationId
+        });
+
+        await handleResponse(response);
+    }
+
+    async function upgradeStation(stationId) {
+        const response = await fetch("/Content/Hideout?handler=UpgradeStation", {
+            method: "POST",
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "RequestVerificationToken": document.getElementById('antiForgeryToken').value
+            },
+            body: stationId
+        });
+
+        await handleResponse(response);
     }
 
     const grid = document.getElementById("grid");

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using Tracker.Middlewares;
 using Tracker.Models;
 using Tracker.Services;
@@ -16,7 +17,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // Add services to the container.
-builder.Services.AddRazorPages(options => options.Conventions.AuthorizeAreaFolder("Content", "/"));
+builder.Services
+    .AddRazorPages(options => options.Conventions.AuthorizeAreaFolder("Content", "/"))
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.LoginPath = "/Login";

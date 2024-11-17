@@ -22,7 +22,6 @@ namespace Tracker.Models
         public DbSet<Station> Stations { get; set; }
         public DbSet<Module> Modules { get; set; }
         public DbSet<ModuleRequirement> ModuleRequirements { get; set; }
-        public DbSet<ProblemQuest> Problems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

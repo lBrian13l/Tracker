@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Tracker.Models;
 using Tracker.Models.Hideout;
@@ -26,14 +27,28 @@ namespace Tracker.Services
             List<Station>? stations = DeserializeHideout(hideoutJson);
 
             if (stations != null)
+            {
                 await _db.Stations.AddRangeAsync(stations);
+                List<UserInfo> userInfos = await _db.UserInfos.ToListAsync();
+
+                foreach (UserInfo userInfo in userInfos)
+                {
+                    foreach (Station station in stations)
+                    {
+                        if (station.Name == "Stash")
+                            userInfo.StationCrosses.Add(new UserInfoStationCross { Station = station, Level = 1 });
+                        else
+                            userInfo.Stations.Add(station);
+                    }
+                }
+            }
 
             string itemsJson = await client.GetStringAsync(_itemsPath);
             List<Item> items = DeserializeItems(itemsJson);
             await _db.Items.AddRangeAsync(items);
 
             string questsJson = await client.GetStringAsync(_questsPath);
-            List<Quest> quests = await DeserializeQuests(questsJson);
+            List<Quest> quests = DeserializeQuests(questsJson);
             await _db.Quests.AddRangeAsync(quests);
 
             _db.SaveChanges();
@@ -47,7 +62,12 @@ namespace Tracker.Services
                 return null;
 
             foreach (JsonObject? station in hideoutJsons["stations"])
+            {
                 station!["name"] = station?["locales"]?["en"]?.DeepClone();
+                string oldName = station!["name"]!.ToString();
+                string newName = oldName.Substring(0, 1).ToUpper() + oldName.Substring(1).ToLower();
+                station!["name"] = newName;
+            }
 
             List<Station> stations = JsonSerializer.Deserialize<List<Station>>(hideoutJsons["stations"], new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
 
@@ -85,7 +105,7 @@ namespace Tracker.Services
             return itemsList;
         }
 
-        private async Task<List<Quest>> DeserializeQuests(string questsJson)
+        private List<Quest> DeserializeQuests(string questsJson)
         {
             List<JsonObject> questJsons = JsonSerializer.Deserialize<List<JsonObject>>(questsJson)!;
             List<Quest> quests = new List<Quest>();
@@ -99,9 +119,6 @@ namespace Tracker.Services
                 if (objectives == null)
                     continue;
 
-                bool cont = false;
-                ProblemQuest problemQuest = new ProblemQuest();
-
                 if (questJson.ContainsKey("require"))
                 {
                     JsonObject? require = questJson["require"]!.AsObject();
@@ -109,18 +126,6 @@ namespace Tracker.Services
                     if (require.ContainsKey("quests"))
                     {
                         JsonArray? questsRequire = require["quests"]!.AsArray();
-
-                        //foreach (JsonNode? questRequire in questsRequire)
-                        //{
-                        //    if (questRequire!.GetValueKind() == JsonValueKind.Array)
-                        //    {
-                        //        foreach (JsonNode? q in questRequire.AsArray())
-                        //            problemQuest.Values.Add(q.ToString());
-
-                        //        problemQuest.FieldName = "require";
-                        //        cont = true;
-                        //    }
-                        //}
 
                         for (int i = questsRequire.Count - 1; i >= 0; i--)
                         {
@@ -136,12 +141,7 @@ namespace Tracker.Services
                 }
 
                 if (questJson["require"]!["level"] == null)
-                {
-                    //problemQuest.FieldName = "level";
-                    //cont = true;
-
                     questJson["require"]!["level"] = 1;
-                }
 
                 for (int i = objectives.Count - 1; i >= 0; i--)
                     if (objectives[i]!["type"]!.ToString() == "key")
@@ -151,70 +151,14 @@ namespace Tracker.Services
                 {
                     if (objective!.ContainsKey("target") && objective["target"]!.GetValueKind() == JsonValueKind.Number)
                         objective["target"] = objective["target"]!.ToString();
-                    //else if (objective.ContainsKey("target") && objective["target"]!.GetValueKind() != JsonValueKind.String)
-                    //{
-                    //    foreach (JsonNode? item in objective["target"]!.AsArray())
-                    //        problemQuest.Values.Add(item?.ToString()!);
-
-                    //    problemQuest.FieldName = "target";
-                    //    cont = true;
-                    //}
 
                     if (objective.ContainsKey("with") && objective["with"]![0]!.GetValueKind() == JsonValueKind.Object)
-                    {
                         objective["with"]!.AsArray().Clear();
-
-                        //foreach (JsonNode? item in objective["with"]!.AsArray())
-                        //{
-                        //    if (item!.GetValueKind() == JsonValueKind.Object && item.AsObject().ContainsKey("name"))
-                        //    {
-                        //        problemQuest.Values.Add(item!["name"]!.ToString());
-                        //        problemQuest.FieldName = "with";
-                        //        cont = true;
-                        //    }
-                        //}
-                    }
-                }
-                Console.WriteLine($"_________________ID: {questJson["id"]!.ToString()}");
-                if (cont)
-                {
-                    problemQuest.Name = questJson["title"]!.ToString();
-                    await _db.Problems.AddAsync(problemQuest);
-                    await _db.SaveChangesAsync();
-                    continue;
                 }
 
                 Quest quest = JsonSerializer.Deserialize<Quest>(questJson, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
                 quests.Add(quest);
             }
-
-            //List<int> ids = new List<int>();
-            //List<Quest> problemQuests = new List<Quest>();
-
-            //foreach (Quest quest in quests)
-            //{
-            //    foreach (QuestObjective objective in quest.Objectives)
-            //    {
-            //        if (!ids.Contains(objective.Id))
-            //            ids.Add(objective.Id);
-            //        else
-            //        {
-            //            ProblemQuest problemQuest = new ProblemQuest();
-            //            problemQuest.Name = quest.Title;
-            //            problemQuest.FieldName = "objectiveID";
-            //            problemQuest.Values.Add(objective.Id.ToString());
-            //            _db.Problems.Add(problemQuest);
-            //            _db.SaveChanges();
-            //            problemQuests.Add(quest);
-            //            break;
-            //        }
-            //    }
-            //}
-
-            //foreach (Quest quest in problemQuests)
-            //{
-            //    quests.Remove(quest);
-            //}
 
             return quests;
         }

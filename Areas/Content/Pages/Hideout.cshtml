@@ -3,10 +3,8 @@
 @{
     ViewData["Title"] = "Hideout";
 }
-<head>
-    <h1>Hideout</h1>
-</head>
 <body>
+    <h1>Hideout</h1>
     <div class="container">
         <div class="row" id="grid"></div>
     </div>
@@ -14,12 +12,17 @@
 
 <script>
     async function getStations() {
-        const response = await fetch("/Content/Hideout?handler=Stations", {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
+        try {
+            const response = await fetch("/Content/Hideout?handler=Stations", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
 
-        handleResponse(response);
+            await handleResponse(response);
+        }
+        catch (error) {
+            console.error(error.message);
+        }
     }
 
     async function handleResponse(response) {
@@ -50,11 +53,8 @@
             maxLevelDescription.textContent = "Max level";
             newStation.appendChild(maxLevelDescription);
         }
-        else if (station.isAvailable === false) {
-            newStation.appendChild(createModuleRequirements(station));
-        }
         else {
-            newStation.appendChild(createItemRequirements(station));
+            newStation.appendChild(createRequirements(station));
         }
 
         newStation.appendChild(createLevelDiv(station));
@@ -62,40 +62,21 @@
         grid.appendChild(newCol);
     }
 
-    function createModuleRequirements(station) {
+    function createRequirements(station) {
         const requirementsDiv = document.createElement("div");
-        requirementsDiv.id = "moduleRequirementsDiv";
+        requirementsDiv.className = station.isAvailable ? "itemRequirementsDiv" : "moduleRequirementsDiv";
         const requires = document.createElement("span");
         requires.textContent = "Requires:";
         requirementsDiv.appendChild(requires);
         let module = station.modules.find(module => module.level === station.level + 1);
+        const targetType = station.isAvailable ? "item" : "module";
 
         if (module !== undefined) {
             module.require.forEach(requirement => {
-                if (requirement.type === "module") {
+                if (requirement.type === targetType) {
                     let requirementName = document.createElement("span");
-                    requirementName.textContent = requirement.name + " level " + requirement.quantity;
-                    requirementsDiv.appendChild(requirementName);
-                }
-            });
-        }
-
-        return requirementsDiv;
-    }
-
-    function createItemRequirements(station) {
-        const requirementsDiv = document.createElement("div");
-        requirementsDiv.id = "itemRequirementsDiv";
-        const requires = document.createElement("span");
-        requires.textContent = "Requires:";
-        requirementsDiv.appendChild(requires);
-        let module = station.modules.find(module => module.level === station.level + 1);
-
-        if (module !== undefined) {
-            module.require.forEach(requirement => {
-                if (requirement.type === "item") {
-                    let requirementName = document.createElement("span");
-                    requirementName.textContent = requirement.quantity + " " + requirement.name;
+                    requirementName.textContent = targetType === "item" ? requirement.quantity + " " + requirement.name
+                    : requirement.name + " level " + requirement.quantity;
                     requirementsDiv.appendChild(requirementName);
                 }
             });
@@ -115,9 +96,8 @@
 
         if ((station.name === "Stash" && station.level === 1) || station.level === 0)
             downButton.setAttribute("disabled", '');
-        else {
+        else
             downButton.addEventListener("click", async () => await downgradeStation(station.id));
-        }
 
         const level = document.createElement("span");
         level.className = "mx-2";
@@ -131,39 +111,39 @@
 
         if (station.maxLevel || station.isAvailable === false)
             upButton.setAttribute("disabled", '');
-        else {
+        else
             upButton.addEventListener("click", async () => await upgradeStation(station.id));
-        }
 
         return levelDiv;
     }
 
     async function downgradeStation(stationId) {
-        const response = await fetch("/Content/Hideout?handler=DowngradeStation", {
-            method: "POST",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "RequestVerificationToken": document.getElementById('antiForgeryToken').value
-            },
-            body: stationId
-        });
-
-        await handleResponse(response);
+        const url = "/Content/Hideout?handler=DowngradeStation";
+        await changeStation(stationId, url);
     }
 
     async function upgradeStation(stationId) {
-        const response = await fetch("/Content/Hideout?handler=UpgradeStation", {
-            method: "POST",
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "RequestVerificationToken": document.getElementById('antiForgeryToken').value
-            },
-            body: stationId
-        });
+        const url = "/Content/Hideout?handler=UpgradeStation";
+        await changeStation(stationId, url);
+    }
 
-        await handleResponse(response);
+    async function changeStation(stationId, url) {
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": document.getElementById('antiForgeryToken').value
+                },
+                body: stationId
+            });
+
+            await handleResponse(response);
+        }
+        catch (error) {
+            console.error(error.message);
+        }
     }
 
     const grid = document.getElementById("grid");

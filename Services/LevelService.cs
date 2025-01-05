@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Tracker.Models;
+using Tracker.Models.Users;
 
 namespace Tracker.Services
 {

@@ -1,4 +1,4 @@
-﻿namespace Tracker.Models
+﻿namespace Tracker.Models.Quests
 {
     public enum Trader
     {

@@ -3,7 +3,9 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Tracker.Models;
 using Tracker.Models.Hideout;
+using Tracker.Models.Items;
 using Tracker.Models.Quests;
+using Tracker.Models.Users;
 
 namespace Tracker.Services
 {
@@ -13,6 +15,7 @@ namespace Tracker.Services
         private string _hideoutPath = "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/hideout.json";
         private string _itemsPath = "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/items.en.json";
         private string _questsPath = "https://raw.githubusercontent.com/TarkovTracker/tarkovdata/master/quests.json";
+        private JsonSerializerOptions _serializerOptions = new() { PropertyNameCaseInsensitive = true };
 
         public DatabaseUpdateService(ApplicationDbContext db)
         {
@@ -36,7 +39,7 @@ namespace Tracker.Services
                     foreach (Station station in stations)
                     {
                         if (station.Name == "Stash")
-                            userInfo.StationCrosses.Add(new UserInfoStationCross { Station = station, Level = 1 });
+                            userInfo.UserStations.Add(new UserStation { Station = station, Level = 1 });
                         else
                             userInfo.Stations.Add(station);
                     }
@@ -69,7 +72,7 @@ namespace Tracker.Services
                 station!["name"] = newName;
             }
 
-            List<Station> stations = JsonSerializer.Deserialize<List<Station>>(hideoutJsons["stations"], new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+            List<Station> stations = JsonSerializer.Deserialize<List<Station>>(hideoutJsons["stations"], _serializerOptions)!;
 
             foreach (JsonObject? module in hideoutJsons["modules"])
             {
@@ -83,7 +86,7 @@ namespace Tracker.Services
                 }
             }
 
-            List<Module> modules = JsonSerializer.Deserialize<List<Module>>(hideoutJsons["modules"], new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+            List<Module> modules = JsonSerializer.Deserialize<List<Module>>(hideoutJsons["modules"], _serializerOptions)!;
 
             foreach (Module module in modules)
             {
@@ -96,7 +99,9 @@ namespace Tracker.Services
 
         private List<Item> DeserializeItems(string itemsJson)
         {
-            Dictionary<string, Item> itemsDictionary = JsonSerializer.Deserialize<Dictionary<string, Item>>(itemsJson, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+            Dictionary<string, Item> itemsDictionary =
+                JsonSerializer.Deserialize<Dictionary<string, Item>>(itemsJson, _serializerOptions)!;
+
             List<Item> itemsList = new List<Item>();
 
             foreach (var item in itemsDictionary)
@@ -149,14 +154,15 @@ namespace Tracker.Services
 
                 foreach (JsonObject? objective in objectives)
                 {
-                    if (objective!.ContainsKey("target") && objective["target"]!.GetValueKind() == JsonValueKind.Number)
-                        objective["target"] = objective["target"]!.ToString();
+                    if (objective!["type"]!.ToString() == "reputation" &&
+                        objective!.ContainsKey("target") && objective["target"]!.GetValueKind() == JsonValueKind.Number)
+                        objective["target"] = ((Trader)(int)objective["target"]!).ToString();
 
                     if (objective.ContainsKey("with") && objective["with"]![0]!.GetValueKind() == JsonValueKind.Object)
                         objective["with"]!.AsArray().Clear();
                 }
 
-                Quest quest = JsonSerializer.Deserialize<Quest>(questJson, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
+                Quest quest = JsonSerializer.Deserialize<Quest>(questJson, _serializerOptions)!;
                 quests.Add(quest);
             }
 

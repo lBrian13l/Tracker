@@ -3,6 +3,160 @@
 @{
     ViewData["Title"] = "Items";
 }
-<div>
+<body>
     <h1>Items</h1>
-</div>
+    <div class="container">
+        <div class="row" id="grid"></div>
+    </div>
+</body>
+
+<script>
+    async function getItems() {
+        try {
+            const response = await fetch("/Content/Items?handler=Items", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
+
+            if (response.ok === true) {
+                const result = await response.json();
+
+                if (result.success === false && result.redirectUrl) {
+                    window.location.href = result.redirectUrl;
+                }
+                else {
+                    const items = result.items;
+                    const fragment = document.createDocumentFragment();
+                    items.forEach(item => fragment.appendChild(createItem(item)));
+                    grid.appendChild(fragment);
+                }
+            }
+        }
+        catch (error) {
+            console.error(error.message);
+        }
+    }
+
+    function createItem(item) {
+        const newCol = document.createElement("div");
+        newCol.className = "col-12 col-sm-6 col-md-4 col-lg-3";
+        newCol.dataset.type = item.relateType;
+        newCol.dataset.relatedId = item.relatedId;
+
+        const newItem = document.createElement("div");
+        newItem.className = "p-3 mb-3 bg-info text-white text-center itemRequirementsDiv";
+        newItem.textContent = item.shortName;
+
+        const relatedName = document.createElement("span");
+        relatedName.textContent = `${item.relatedName}`;
+        newItem.appendChild(relatedName);
+
+        const foundInRaid = document.createElement("span");
+        foundInRaid.textContent = `Found in raid: ${item.foundInRaid? 'yes' : 'no'}`;
+        newItem.appendChild(foundInRaid);
+
+        newItem.appendChild(createQuantityDiv(item));
+
+        newCol.appendChild(newItem);
+        return newCol;
+    }
+
+    function createQuantityDiv(item) {
+        const quantityDiv = document.createElement("div");
+        quantityDiv.className = "mt-3 d-flex justify-content-center align-items-center quantity-div";
+
+        const downButton = document.createElement("button");
+        downButton.className = "btn btn-light me-2";
+        downButton.textContent = "-";
+        downButton.addEventListener("click", async (event) => await changeQuantity(item.id, event, false));
+        quantityDiv.appendChild(downButton);
+
+        if (item.quantity <= 0)
+            downButton.setAttribute("disabled", '');
+
+        const quantity = document.createElement("span");
+        quantity.className = "mx-2";
+        quantity.textContent = `${item.quantity}/${item.requiredQuantity}`;
+        quantity.setAttribute("data-quantity", item.requiredQuantity);
+        quantityDiv.appendChild(quantity);
+
+        const upButton = document.createElement("button");
+        upButton.className = "btn btn-light ms-2";
+        upButton.textContent = "+";
+        upButton.addEventListener("click", async (event) => await changeQuantity(item.id, event, true));
+        quantityDiv.appendChild(upButton);
+
+        if (item.quantity >= item.requiredQuantity)
+            upButton.setAttribute("disabled", '');
+
+        return quantityDiv;
+    }
+
+    async function changeQuantity(itemId, event, increase) {
+        const button = event.target;
+        const itemDiv = button.closest('.col-12');
+        const relateType = itemDiv.dataset.type;
+        const relatedId = itemDiv.dataset.relatedId;
+        const url = increase ? "/Content/Items?handler=AddItem" : "/Content/Items?handler=RemoveItem";
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": document.getElementById('antiForgeryToken').value
+                },
+                body: JSON.stringify({ Id: itemId, RelateType: relateType, RelatedId: relatedId })
+            });
+
+            if (response.ok === true) {
+                const result = await response.json();
+
+                if (result.success === false && result.redirectUrl) {
+                    window.location.href = result.redirectUrl;
+                }
+                else {
+                    const quantitySpan = itemDiv.querySelector('span[data-quantity]');
+                    const requiredQuantity = (Number)(quantitySpan.getAttribute("data-quantity"));
+                    quantitySpan.textContent = `${result.quantity}/${requiredQuantity}`;
+
+                    if (increase)
+                        switchButtonsOnAdd(result.quantity, requiredQuantity, itemDiv);
+                    else
+                        switchButtonsOnRemove(result.quantity, requiredQuantity, itemDiv);
+                }
+            }
+        }
+        catch (error) {
+            console.error(error.message);
+        }
+    }
+
+    function switchButtonsOnAdd(quantity, requiredQuantity, itemDiv) {
+        if (quantity >= requiredQuantity) {
+            const upButton = itemDiv.querySelector('.btn.ms-2');
+            upButton.setAttribute("disabled", '');
+        }
+
+        if (quantity === 1) {
+            const downButton = itemDiv.querySelector('.btn.me-2');
+            downButton.removeAttribute("disabled", '');
+        }
+    }
+
+    function switchButtonsOnRemove(quantity, requiredQuantity, itemDiv) {
+        if (quantity === requiredQuantity - 1) {
+            const upButton = itemDiv.querySelector('.btn.ms-2');
+            upButton.removeAttribute("disabled", '');
+        }
+
+        if (quantity <= 0) {
+            const downButton = itemDiv.querySelector('.btn.me-2');
+            downButton.setAttribute("disabled", '');
+        }
+    }
+
+    const grid = document.getElementById("grid");
+    getItems();
+</script>

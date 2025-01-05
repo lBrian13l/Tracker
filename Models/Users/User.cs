@@ -1,4 +1,4 @@
-﻿namespace Tracker.Models
+﻿namespace Tracker.Models.Users
 {
     public class User
     {

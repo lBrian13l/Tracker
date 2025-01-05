@@ -1,6 +1,8 @@
-﻿namespace Tracker.Models.Hideout
+﻿using Tracker.Models.Users;
+
+namespace Tracker.Models.Hideout
 {
-    public class UserInfoStationCross
+    public class UserStation
     {
         public int Level { get; set; }
         public int UserInfoId { get; set; }

@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using Tracker.Models;
+using Tracker.Models.Items;
 using Tracker.Models.Quests;
+using Tracker.Models.Users;
 
 namespace Tracker.Areas.Content.Pages
 {
@@ -45,7 +47,9 @@ namespace Tracker.Areas.Content.Pages
 
         private async Task<UserInfo?> GetUserInfoAsync()
         {
-            User? user = await _db.Users.Include(u => u.UserInfo).ThenInclude(qi => qi!.Quests).FirstOrDefaultAsync(u => u.Name == _userName);
+            User? user = await _db.Users.Include(u => u.UserInfo).ThenInclude(ui => ui!.Quests)
+                .FirstOrDefaultAsync(u => u.Name == _userName);
+
             return user?.UserInfo;
         }
 

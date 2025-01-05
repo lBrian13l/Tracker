@@ -3,10 +3,8 @@
 @{
     ViewData["Title"] = "Quests";
 }
-<head>
-    <h1>Quests</h1>
-</head>
 <body>
+    <h1>Quests</h1>
     <table>
         <thead><tr><th>Giver</th><th>Title</th><th>Objectives</th><th>Wiki</th></tr></thead>
         <tbody></tbody>
@@ -15,11 +13,20 @@
 
 <script>
     async function getQuests() {
-        const response = await fetch("/Content/Quests?handler=Quests", {
-            method: "GET",
-            headers: { "Accept": "application/json" }
-        });
+        try {
+            const response = await fetch("/Content/Quests?handler=Quests", {
+                method: "GET",
+                headers: { "Accept": "application/json" }
+            });
 
+            await handleResponce(response);
+        }
+        catch (error) {
+            console.error(error.message);
+        }
+    }
+
+    async function handleResponce(response) {
         if (response.ok === true) {
             const result = await response.json();
 
@@ -36,124 +43,65 @@
     function createTable(quests) {
         const rows = document.querySelector("tbody");
         rows.innerHTML = '';
-        quests.forEach(quest => rows.append(createRow(quest)));
+        const fragment = document.createDocumentFragment();
+        quests.forEach(quest => fragment.append(createRow(quest)));
+        rows.append(fragment);
     }
 
     function createRow(quest) {
         const tr = document.createElement("tr");
         tr.setAttribute("data-rowid", quest.id);
 
-        const giverTd = document.createElement("td");
-        giverTd.textContent = quest.giver;
-        tr.append(giverTd);
-
-        const titleTd = document.createElement("td");
-        titleTd.textContent = quest.title;
-        tr.append(titleTd);
-
-        const objectives = document.createElement("td");
-        for (const objective of quest.objectives) {
-            const innerTr = document.createElement("tr");
-            innerTr.textContent = createObjective(objective);
-            objectives.append(innerTr);
-        }
-        tr.append(objectives);
-
-        const wikiTd = document.createElement("td");
-        wikiTd.textContent = quest.wiki;
-        tr.append(wikiTd);
+        tr.innerHTML = `
+            <td>${quest.giver}</td>
+            <td>${quest.title}</td>
+            <td>${quest.objectives.map(createObjective).join('<br>')}</td>
+            <td>${quest.wiki}</td>
+        `;
 
         const doneLink = document.createElement("button");
         doneLink.className = "btn btn-outline-dark";
         doneLink.append("Done");
-        doneLink.addEventListener("click", async () => await compliteQuest(quest.id));
+        doneLink.addEventListener("click", async () => await completeQuest(quest.id));
         tr.append(doneLink);
 
         return tr;
     }
 
     function createObjective(objective) {
-        let objectiveString = "";
+        const typesMap = {
+            warning: () => objective.target,
+            reputation: () => `Reach level ${objective.number} loyalty with ${objective.target}`,
+            skill: () => `Reach the required ${objective.number} ${objective.target} skill level`,
+            collect: () => `Collect ${objective.number} ${objective.target}`,
+            pickup: () => `Pick up ${objective.target}`,
+            place: () => `Place ${objective.number > 1 ? `${objective.number} ` : ''}${objective.target}`,
+            mark: () => `Mark ${objective.target} with ${objective.tool}`,
+            find: () => `Find ${objective.number} ${objective.target} in raid`,
+            locate: () => `Locate ${objective.target}`,
+            build: () => `Build ${objective.target}`,
+            kill: () => {
+                let killString = `Kill ${objective.number} ${objective.target}`;
 
-        if (objective.type === "warning") {
-            objectiveString = objective.target;
-        }
-        else if (objective.type === "reputation") {
-            objectiveString = `Reach level ${objective.number} loyalty with ${objective.target}`;
-        }
-        else if (objective.type === "skill") {
-            objectiveString = `Reach the required ${objective.number} ${objective.target} skill level`
-        }
-        else {
-            objectiveString += objective.type;
+                if (objective.with && objective.with.length > 0) {
+                    const substrings = ["usec", "between", "in", "while", "reshala", "inside", "on", "secure"];
+                    killString += substrings.some(sub => objective.with[0].toLowerCase().startsWith(sub)) ? " " : " with ";
+                    killString += `${objective.with.join(", ")}`;
+                }
 
-            switch (objective.type) {
-                case "kill":
-                    objectiveString += ` ${objective.number}`;
-                    objectiveString += ` ${objective.target}`;
-
-                    const substrings = ["between", "in", "while", "reshala", "inside", "on", "secure"];
-
-                    for (let i = 0; objective.with[i] !== undefined; i++) {
-                        if (i === 0 && substrings.some(substring => objective.with[i].toLowerCase().startsWith(substring)) === false)
-                            objectiveString += " with";
-
-                        objectiveString += objective.with[i];
-
-                        if (objective.with[i + 1] !== undefined)
-                            objectiveString += ", ";
-                    }
-
-                    break;
-
-                case "collect":
-                    objectiveString += ` ${objective.number}`;
-                    objectiveString += ` ${objective.target}`;
-                    break;
-
-                case "pickup":
-                    objectiveString += ` ${objective.target}`;
-                    break;
-
-                case "place":
-                    if (objective.number !== 1)
-                        objectiveString += ` ${objective.number}`;
-
-                    objectiveString += ` ${objective.target}`;
-                    break;
-
-                case "mark":
-                    objectiveString += ` ${objective.target}`;
-                    objectiveString += ` with ${objective.tool}`;
-                    break;
-
-                case "find":
-                    objectiveString += " in raid";
-                    objectiveString += ` ${objective.number}`;
-                    objectiveString += ` ${objective.target}`;
-                    break;
-
-                case "locate":
-                    objectiveString += ` ${objective.target}`;
-                    break;
-
-                case "build":
-                    objectiveString += ` ${objective.target}`;
-                    break;
+                return killString;
             }
+        };
 
-            if (objective.type !== "build") {
-                objectiveString += ` on ${objective.location}`;
+        let objectiveString = typesMap[objective.type]?.() || `${objective.type} ${objective.target}`;
 
-                if (objective.location === "any")
-                    objectiveString += ` location`;
-            }
-        }
+        if (!["warning", "reputation", "skill", "build"].includes(objective.type) && objective.location)
+            objectiveString += ` on ${objective.location === "any" ? "any location" : objective.location}`;
 
         return objectiveString;
     }
 
-    async function compliteQuest(questId) {
+    async function completeQuest(questId) {
         try {
             const response = await fetch("/Content/Quests?handler=QuestDone", {
                 method: "POST",
@@ -165,17 +113,7 @@
                 body: questId
             });
 
-            if (response.ok === true) {
-                const result = await response.json();
-
-                if (result.success === false && result.redirectUrl) {
-                    window.location.href = result.redirectUrl;
-                }
-                else {
-                    const quests = result.quests;
-                    createTable(quests);
-                }
-            }
+            await handleResponce(response);
         }
         catch (error) {
             console.error(error.message);

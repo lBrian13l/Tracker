@@ -21,11 +21,11 @@ body {
   margin-bottom: 60px;
 }
 
-#moduleRequirementsDiv span {
+.moduleRequirementsDiv span {
     display: block;
     color: red;
 }
 
-#itemRequirementsDiv span {
+.itemRequirementsDiv span {
     display: block;
 }

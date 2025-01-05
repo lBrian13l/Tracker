@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using Tracker.Models.Hideout;
+using Tracker.Models.Items;
 using Tracker.Models.Quests;
+using Tracker.Models.Users;
 
 namespace Tracker.Models
 {
@@ -42,19 +44,39 @@ namespace Tracker.Models
             modelBuilder.Entity<UserInfo>()
                 .HasMany(ui => ui.Stations)
                 .WithMany(s => s.UserInfos)
-                .UsingEntity<UserInfoStationCross>(
+                .UsingEntity<UserStation>(
                 c =>
                 {
                     c.HasOne(c => c.UserInfo)
-                    .WithMany(ui => ui.StationCrosses)
+                    .WithMany(ui => ui.UserStations)
                     .HasForeignKey(c => c.UserInfoId);
 
                     c.HasOne(c => c.Station)
-                    .WithMany(s => s.UserInfoCrosses)
+                    .WithMany(s => s.UserStations)
                     .HasForeignKey(c => c.StationId);
 
                     c.Property(c => c.Level);
                     c.HasKey(c => new { c.UserInfoId, c.StationId });
+                });
+
+            modelBuilder.Entity<UserInfo>()
+                .HasMany(ui => ui.Items)
+                .WithMany(i => i.UserInfos)
+                .UsingEntity<UserItem>(
+                c =>
+                {
+                    c.HasOne(c => c.UserInfo)
+                    .WithMany(ui => ui.UserItems)
+                    .HasForeignKey(c => c.UserInfoId);
+
+                    c.HasOne(c => c.Item)
+                    .WithMany(s => s.UserItems)
+                    .HasForeignKey(c => c.ItemId);
+
+                    c.Property(c => c.RelateType);
+                    c.Property(c => c.RelatedId);
+                    c.Property(c => c.Quantity);
+                    c.HasKey(c => new { c.UserInfoId, c.ItemId, c.RelateType, c.RelatedId });
                 });
         }
 

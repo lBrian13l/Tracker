@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using Tracker.Models;
 using Tracker.Models.Hideout;
+using Tracker.Models.Users;
 using Tracker.Services;
 
 namespace Tracker.Pages

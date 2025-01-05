@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Tracker.Models.Users;
 
 namespace Tracker.Models.Quests
 {

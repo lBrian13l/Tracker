@@ -22,8 +22,8 @@
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
                 <a class="navbar-brand" asp-area="" asp-page="/Index">Tracker</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
@@ -52,9 +52,19 @@
                             <li class="nav-link text-dark">
                                 <button onclick="Increase()" type="button">+</button>
                             </li>
-                            <li class="nav-link text-dark">@Model.HttpContext.User.Identity.Name</li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" href="/Logout">Log Out</a>
+                            <li class ="nav-item dropdown">
+                                <a class="nav-link text-dark dropdown-toggle underline"
+                                href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    @Model.HttpContext.User.Identity.Name
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="userDropdown">
+                                    @if (User.IsInRole("admin"))
+                                    {
+                                        <li><a class="dropdown-item" href="/Update">Update database</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                    }
+                                    <li><a class="dropdown-item" href="/Logout">Logout</a></li>
+                                </ul>
                             </li>
                         }
                         else

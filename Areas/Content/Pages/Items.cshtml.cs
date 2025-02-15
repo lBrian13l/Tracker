@@ -35,45 +35,50 @@ namespace Tracker.Areas.Content.Pages
         {
             UserInfo? userInfo = await GetUserInfoAsync();
 
-            if (userInfo == null)
-                return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
-
-            UserItem? userItem = userInfo.UserItems.FirstOrDefault(ui => ui.RelatedId == item.RelatedId &&
+            if (userInfo != null)
+            {
+                UserItem? userItem = userInfo.UserItems.FirstOrDefault(ui => ui.RelatedId == item.RelatedId &&
                 ui.RelateType == item.RelateType && ui.ItemId == item.Id);
 
-            if (userItem == null)
-            {
-                userItem = new UserItem()
+                if (userItem == null)
                 {
-                    RelateType = item.RelateType,
-                    RelatedId = item.RelatedId,
-                    Quantity = 1,
-                    ItemId = item.Id
-                };
+                    userItem = new UserItem()
+                    {
+                        RelateType = item.RelateType,
+                        RelatedId = item.RelatedId,
+                        Quantity = 1,
+                        ItemId = item.Id
+                    };
 
-                userInfo.UserItems.Add(userItem);
-            }
-            else
-            {
-                int? maxQuantityNullable;
-
-                if (item.RelateType == RelateType.Quest)
-                {
-                    QuestObjective? objective = await _db.QuestObjectives.FindAsync(item.RelatedId);
-                    maxQuantityNullable = objective?.Number;
+                    userInfo.UserItems.Add(userItem);
                 }
                 else
                 {
-                    ModuleRequirement? requirement = await _db.ModuleRequirements.FindAsync(item.RelatedId);
-                    maxQuantityNullable = requirement?.Quantity;
+                    int? maxQuantityNullable;
+
+                    if (item.RelateType == RelateType.Quest)
+                    {
+                        QuestObjective? objective = await _db.QuestObjectives.FindAsync(item.RelatedId);
+                        maxQuantityNullable = objective?.Number;
+                    }
+                    else
+                    {
+                        ModuleRequirement? requirement = await _db.ModuleRequirements.FindAsync(item.RelatedId);
+                        maxQuantityNullable = requirement?.Quantity;
+                    }
+
+                    if (maxQuantityNullable == null)
+                        return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
+
+                    int maxQuantity = (int)maxQuantityNullable;
+                    userItem.Quantity = Math.Min(userItem.Quantity + 1, maxQuantity);
                 }
 
-                int maxQuantity = maxQuantityNullable ?? 0;
-                userItem.Quantity = Math.Min(userItem.Quantity + 1, maxQuantity);
+                await _db.SaveChangesAsync();
+                return new JsonResult(new { success = true, quantity = userItem.Quantity }) { ContentType = "application/json" };
             }
 
-            await _db.SaveChangesAsync();
-            return new JsonResult(new { success = true, quantity = userItem.Quantity}) { ContentType = "application/json" };
+            return new JsonResult(new { success = false, redirectUrl = Url.Page("/Error") });
         }
 
         public async Task<IActionResult> OnPostRemoveItem([FromBody] ItemDto item)

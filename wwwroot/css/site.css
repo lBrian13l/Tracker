@@ -29,3 +29,11 @@ body {
 .itemRequirementsDiv span {
     display: block;
 }
+
+.underline {
+    text-decoration: underline;
+}
+
+.table tbody tr {
+    border-bottom: 2px solid #dee2e6;
+}

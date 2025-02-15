@@ -5,8 +5,8 @@
 }
 <body>
     <h1>Quests</h1>
-    <table>
-        <thead><tr><th>Giver</th><th>Title</th><th>Objectives</th><th>Wiki</th></tr></thead>
+    <table class="table table-striped table-hover table-bordered">
+        <thead><tr><th>Giver</th><th>Title</th><th>Objectives</th><th>Wiki</th><th>Completion</th></tr></thead>
         <tbody></tbody>
     </table>
 </body>
@@ -44,26 +44,30 @@
         const rows = document.querySelector("tbody");
         rows.innerHTML = '';
         const fragment = document.createDocumentFragment();
-        quests.forEach(quest => fragment.append(createRow(quest)));
+        quests.forEach((quest, index) => fragment.append(createRow(quest, index)));
         rows.append(fragment);
     }
 
-    function createRow(quest) {
+    function createRow(quest, index) {
         const tr = document.createElement("tr");
         tr.setAttribute("data-rowid", quest.id);
+        tr.classList.add(index % 2 === 0 ? "table-light" : "table-secondary");
 
         tr.innerHTML = `
             <td>${quest.giver}</td>
-            <td>${quest.title}</td>
+            <td><strong>${quest.title}</strong></td>
             <td>${quest.objectives.map(createObjective).join('<br>')}</td>
-            <td>${quest.wiki}</td>
+            <td>
+                <a href="${quest.wiki}" target="_blank" class="btn btn-sm btn-primary">
+                    Wiki
+                </a>
+            </td>
+            <td>
+                <button class="btn btn-outline-success btn-sm">✔ Done</button>
+            </td>
         `;
 
-        const doneLink = document.createElement("button");
-        doneLink.className = "btn btn-outline-dark";
-        doneLink.append("Done");
-        doneLink.addEventListener("click", async () => await completeQuest(quest.id));
-        tr.append(doneLink);
+        tr.querySelector("button").addEventListener("click", async () => await completeQuest(quest.id));
 
         return tr;
     }

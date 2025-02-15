@@ -76,7 +76,7 @@
                 if (requirement.type === targetType) {
                     let requirementName = document.createElement("span");
                     requirementName.textContent = targetType === "item" ? requirement.quantity + " " + requirement.name
-                    : requirement.name + " level " + requirement.quantity;
+                        : requirement.name + " level " + requirement.quantity;
                     requirementsDiv.appendChild(requirementName);
                 }
             });
